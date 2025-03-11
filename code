@@ -1,0 +1,415 @@
+import streamlit as st
+import pickle
+import pandas as pd
+import base64
+from pathlib import Path
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()  ## loading all the environment variables
+
+import streamlit as st
+import os
+import google.generativeai as genai
+
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+## function to load Gemini Pro model and get repsonses
+model = genai.GenerativeModel("gemini-pro")
+chat = model.start_chat(history=[])
+def get_gemini_response(question):
+    response = chat.send_message(question, stream=True)
+    return response
+
+
+def streaming_platform_links():
+    st.markdown(
+        """                                                                                                                                                                              
+
+
+        <div style='text-align: center; color:white;text-decoration: underline;'>
+            <h2>               Binge hub</h2>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    platforms = [
+        {"name": "Netflix", "url": "https://www.netflix.com", "logo": "netflix.png"},
+        {"name": "Prime Video", "url": "https://www.primevideo.com", "logo": "prime.jpg"},
+        {"name": "Disney+", "url": "https://www.disneyplus.com", "logo": "hotstar.jpeg"},
+        {"name": "zee5", "url": "https://www.zee5.com/", "logo": "Zee5.jpeg"},
+
+    ]
+
+    cols = st.columns(len(platforms))
+    for col, platform in zip(cols, platforms):
+        with col:
+            st.image(platform["logo"], use_container_width=True)
+            st.markdown(
+                f"<a href='{platform['url']}' target='_blank' style='text-decoration:none;'><h3 style='text-align: center; color: white;'>{platform['name']}</h3></a>",
+                unsafe_allow_html=True
+            )
+
+def set_bg(image_path):
+    if not Path(image_path).is_file():
+        st.error(f"Background image file not found at: {image_path}")
+        return
+
+    with open(image_path, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read()).decode()
+
+    page_bg_img = f"""
+    <style>
+    .stApp {{
+        background-image: url("data:image/jpeg;base64,{encoded_string}");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }}
+    </style>
+    """
+    st.markdown(page_bg_img, unsafe_allow_html=True)
+
+def display_actor_images(actor_images, actor_names, start_index):
+    cols = st.columns(3)
+    for col, img, name in zip(cols, actor_images[start_index:start_index+3], actor_names[start_index:start_index+3]):
+        col.image(img, caption=name, use_container_width=True)
+
+
+import requests
+
+
+def fetch_streaming_links(movie_name):
+    api_key = '0a4497e75fc11aa098734fcc347dd820'
+    search_url = f'https://api.themoviedb.org/3/search/movie?api_key={api_key}&query={movie_name}'
+    search_response = requests.get(search_url)
+    search_data = search_response.json()
+
+    if search_data['results']:
+        movie_id = search_data['results'][0]['id']
+        providers_url = f'https://api.themoviedb.org/3/movie/{movie_id}/watch/providers?api_key={api_key}'
+        providers_response = requests.get(providers_url)
+        providers_data = providers_response.json()
+
+        if 'results' in providers_data:
+            # Assuming you want data for a specific region, e.g., 'US'
+            region = 'US'
+            if region in providers_data['results']:
+                providers = providers_data['results'][region].get('flatrate', [])
+                # Check if link exists and provide fallback if it doesn't
+                links = {
+                    provider['provider_name']: provider.get('link', f'https://www.themoviedb.org/movie/{movie_id}')
+                    for provider in providers
+                }
+                return links
+    return None
+
+def home_page():
+    set_bg("b8.jpg")
+    st.markdown(
+        """
+        <div style="font-family: 'bold', sans-serif; text-align: center;">
+            <h1 style="color: white; font-size: 90px;text-decoration: underline;">WatchWise</h1>
+            <h3 style="color: black; font-size: 50px;">Your Vibe Maker</h3>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # Create two buttons in the same row with spacing
+    col1, col2, col3, col4, col5 = st.columns([1, 2, 1, 2, 1])  # Adjust column widths for spacing
+
+    with col2:
+        explore_button = st.button("Explore")
+
+    with col4:
+        vibe_maker_button = st.button("Your Vibe Maker")
+
+    # Navigation based on button click
+    if explore_button:
+        st.session_state.current_page = "chatbot_page"
+
+    if vibe_maker_button:
+        st.session_state.current_page = "login_page"
+    streaming_platform_links()
+    st.markdown(
+        """
+        <div style='text-align: center; color: white;'>
+            <h2>The Essence of Cinema</h2>
+            <p>Cinema is also a powerful medium of cultural expression. It showcases the traditions, beliefs, and aspirations of societies across the globe, offering a window into the world’s many perspectives. Indian cinema, for instance, is renowned for its vibrant storytelling, soulful music, and larger-than-life visuals, making it a beloved cultural phenomenon worldwide.Moreover, cinema has the ability to influence and unite. It raises awareness about pressing issues, fosters empathy by allowing us to walk in someone else’s shoes, and brings together people from all walks of life under the shared experience of a film. Whether it’s a blockbuster or an indie gem, cinema creates moments that resonate deeply with audiences.</p>
+            <h2>Tollywood's Influence</h2>
+            <p>Tollywood, the Telugu film industry, has a unique charm. Known for its powerful narratives, groundbreaking visuals, and captivating music, it stands as a beacon of creativity in Indian cinema.Tollywood refers to the Telugu-language film industry, primarily based in the Indian states of Andhra Pradesh and Telangana. It is one of the largest and most influential film industries in India, producing a wide range of films, including action, drama, romance, and comedy. Tollywood is well-known for its large-scale productions, vibrant music, and a strong fan base.</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        """
+        <div style='text-align: center; color: white;'>
+            <h2>Our Founders</h2>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    founders = [
+        {"name": "Neetish Reddy", "roll": "2451-22-748-006"},
+        {"name": "Puttam Abhinav", "roll": "2451-22-748-014"},
+        {"name": "Sai Charan", "roll": "2451-22-748-040"},
+    ]
+
+    cols = st.columns(len(founders))
+    for col, founder in zip(cols, founders):
+        with col:
+            st.markdown(f"<h3 style='text-align: center; color: white;'>{founder['name']}</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h4 style='text-align: center; color: white;'>{founder['roll']}</h4>", unsafe_allow_html=True)
+
+
+def chatbot_page():
+    set_bg("b8.jpg")
+    if st.button("Back"):
+        navigate_to("home_page")
+
+    st.header("        Explore The World Of Tollywood")
+
+    # Initialize session state for chat history if it doesn't exist
+    if 'chat_history' not in st.session_state:
+        st.session_state['chat_history'] = []
+
+    input = st.text_input("Input: ", key="input")
+    submit = st.button("Ask the question")
+
+    if submit and input:
+        response = get_gemini_response(input)
+        # Add user query and response to session state chat history
+        st.session_state['chat_history'].append(("You", input))
+        st.subheader("The Response is")
+        for chunk in response:
+            st.write(chunk.text)
+            st.session_state['chat_history'].append(("Bot", chunk.text))
+    st.subheader("The Chat History is")
+
+    for role, text in st.session_state['chat_history']:
+        st.write(f"{role}: {text}")
+def login_page():
+    set_bg("b8.jpg")
+    if st.button("Back"):
+        navigate_to("home_page")
+    st.markdown(
+        "<h1 style='text-align: center; color: white;'>Welcome to WatchWise-A Cineworld</h1>",
+        unsafe_allow_html=True
+    )
+
+    user_id = st.text_input("User ID", placeholder="Enter your User ID")
+    password = st.text_input("Password", type="password", placeholder="Enter your password")
+    if st.button("Login"):
+        st.session_state.logged_in = True
+        st.success("Login Successful!")
+        st.session_state.current_page = "movie_recommendation_page"
+
+    st.markdown(
+        "<h2 style='text-align: center; color: white;'>CINEMA ICON</h2>",
+        unsafe_allow_html=True
+    )
+
+    actor_images = ["a1.jpg", "a2.jpg", "j.png", "r.jpg", "m.jpg", "s.jpg", "p.jpg"]
+    actor_names = ["Mahesh Babu", "Sai Pallavi", "Genelia", "Ram Pothineni", "Mrunal Thakur", "Samantha", "Prabhas"]
+
+    if "actor_index" not in st.session_state:
+        st.session_state.actor_index = 0
+
+    col1, col2, col3 = st.columns([1, 4, 1])
+
+    with col1:
+        st.empty()
+
+    with col2:
+        display_actor_images(actor_images, actor_names, st.session_state.actor_index)
+
+    with col3:
+        st.empty()
+
+    with col1:
+        if st.button("\u2190 Previous"):
+            st.session_state.actor_index = max(0, st.session_state.actor_index - 3)
+
+    with col3:
+        if st.button("Next \u2192"):
+            st.session_state.actor_index = min(len(actor_images) - 3, st.session_state.actor_index + 3)
+
+    st.markdown(
+        "<h2 style='text-align: center; color: white;'>Highest Grossing Indian Movies</h2>",
+        unsafe_allow_html=True
+    )
+
+    highest_grossing_movies = [
+        {"name": "DANGAL", "image": "d2.jpg"},
+        {"name": "BAHUBALI:THE CONCLUSION", "image": "bb2.jpg"},
+        {"name": "PUSHPA:THE RULE", "image": "p3.jpg"},
+        {"name": "KGF:CHAPTER 2", "image": "kgf2.jpeg"},
+        {"name": "RRR", "image": "rrr.jpg"},
+        {"name": "JAWAN", "image": "j.jpg"}
+    ]
+
+    cols = st.columns(len(highest_grossing_movies))
+    for col, movie in zip(cols, highest_grossing_movies):
+        with col:
+            st.image(movie["image"], width=700)
+            st.write(movie["name"])
+    st.markdown(
+        """
+        <div style='text-align: center; color: white;'>
+            <h2>The Essence of Cinema</h2>
+            <p>Cinema is also a powerful medium of cultural expression. It showcases the traditions, beliefs, and aspirations of societies across the globe, offering a window into the world’s many perspectives. Indian cinema, for instance, is renowned for its vibrant storytelling, soulful music, and larger-than-life visuals, making it a beloved cultural phenomenon worldwide.Moreover, cinema has the ability to influence and unite. It raises awareness about pressing issues, fosters empathy by allowing us to walk in someone else’s shoes, and brings together people from all walks of life under the shared experience of a film. Whether it’s a blockbuster or an indie gem, cinema creates moments that resonate deeply with audiences.</p>
+            <h2>Tollywood's Influence</h2>
+            <p>Tollywood, the Telugu film industry, has a unique charm. Known for its powerful narratives, groundbreaking visuals, and captivating music, it stands as a beacon of creativity in Indian cinema.Tollywood refers to the Telugu-language film industry, primarily based in the Indian states of Andhra Pradesh and Telangana. It is one of the largest and most influential film industries in India, producing a wide range of films, including action, drama, romance, and comedy. Tollywood is well-known for its large-scale productions, vibrant music, and a strong fan base.</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    streaming_platform_links()
+    st.markdown(
+        """
+        <div style='text-align: center; color: white;'>
+            <h2>Our Founders</h2>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    founders = [
+        {"name": "Neetish Reddy", "roll": "2451-22-748-006"},
+        {"name": "Puttam Abhinav", "roll": "2451-22-748-014"},
+        {"name": "Sai Charan", "roll": "2451-22-748-040"},
+    ]
+
+    cols = st.columns(len(founders))
+    for col, founder in zip(cols, founders):
+        with col:
+            st.markdown(f"<h3 style='text-align: center; color: white;'>{founder['name']}</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h4 style='text-align: center; color: white;'>{founder['roll']}</h4>", unsafe_allow_html=True)
+
+
+
+def movie_recommendation_page():
+    if st.button("Back"):
+        navigate_to("home_page")
+    def fetch_poster(movie_name):
+        api_key = '0a4497e75fc11aa098734fcc347dd820'
+        search_url = f'https://api.themoviedb.org/3/search/movie?api_key={api_key}&query={movie_name}'
+        response = requests.get(search_url)
+        data = response.json()
+        if data['results']:
+            poster_url = f"https://image.tmdb.org/t/p/w500{data['results'][0]['poster_path']}"
+            return poster_url
+        else:
+            return "https://via.placeholder.com/150"
+
+    def recommend(movie):
+        index = movies[movies['Movie_name'] == movie].index[0]
+        distances = sorted(list(enumerate(similary[index])), reverse=True, key=lambda x: x[1])
+        recommended_movies = [movies.iloc[i[0]].Movie_name for i in distances[1:15]]
+        return recommended_movies
+
+    movies = pickle.load(open("movies (1).pkl", "rb"))
+    similary = pickle.load(open("similary (1).pkl", "rb"))
+
+    set_bg("b8.jpg")
+    st.markdown(
+        "<h1 style='text-align: center; color: white;'>WatchWise - A Cineworld</h1>",
+        unsafe_allow_html=True
+    )
+
+    selected_movie_name = st.selectbox("Select Movie", movies['Movie_name'].values)
+
+    if st.button("Recommend"):
+        recommendations = recommend(selected_movie_name)
+        st.subheader("Recommended Movies:")
+
+        for i in range(0, 15, 5):
+            cols = st.columns(5)
+            for col, j in zip(cols, range(i, i + 5)):
+                if j < len(recommendations):
+                    movie_title = recommendations[j]
+                    poster_url = fetch_poster(movie_title)
+                    streaming_links = fetch_streaming_links(movie_title)
+
+                    with col:
+                        if streaming_links:
+                            provider_name, link = list(streaming_links.items())[0]
+                            st.markdown(
+                                f"""
+                                <a href="{link}" target="_blank">
+                                    <img src="{poster_url}" style="width:130px; display:block; margin:auto;" />
+                                    <p style="text-align:center;">{movie_title}</p>
+                                    <p style="text-align:center;">Watch on {provider_name}</p>
+                                </a>
+                                """,
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.image(poster_url, width=130)
+                            st.write(movie_title)
+                            st.write("Streaming info not available.")
+    st.markdown(
+        """
+        <div style='text-align: center; color: white;'>
+            <h2>The Essence of Cinema</h2>
+            <p>Cinema is also a powerful medium of cultural expression. It showcases the traditions, beliefs, and aspirations of societies across the globe, offering a window into the world’s many perspectives. Indian cinema, for instance, is renowned for its vibrant storytelling, soulful music, and larger-than-life visuals, making it a beloved cultural phenomenon worldwide.Moreover, cinema has the ability to influence and unite. It raises awareness about pressing issues, fosters empathy by allowing us to walk in someone else’s shoes, and brings together people from all walks of life under the shared experience of a film. Whether it’s a blockbuster or an indie gem, cinema creates moments that resonate deeply with audiences.</p>
+            <h2>Tollywood's Influence</h2>
+            <p>Tollywood, the Telugu film industry, has a unique charm. Known for its powerful narratives, groundbreaking visuals, and captivating music, it stands as a beacon of creativity in Indian cinema.Tollywood refers to the Telugu-language film industry, primarily based in the Indian states of Andhra Pradesh and Telangana. It is one of the largest and most influential film industries in India, producing a wide range of films, including action, drama, romance, and comedy. Tollywood is well-known for its large-scale productions, vibrant music, and a strong fan base.</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    streaming_platform_links()
+    st.markdown(
+        """
+        <div style='text-align: center; color: white;'>
+            <h2>Our Founders</h2>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    founders = [
+        {"name": "Neetish Reddy", "roll": "2451-22-748-006"},
+        {"name": "Puttam Abhinav", "roll": "2451-22-748-014"},
+        {"name": "Sai Charan", "roll": "2451-22-748-040"},
+    ]
+
+    cols = st.columns(len(founders))
+    for col, founder in zip(cols, founders):
+        with col:
+            st.markdown(f"<h3 style='text-align: center; color: white;'>{founder['name']}</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h4 style='text-align: center; color: white;'>{founder['roll']}</h4>", unsafe_allow_html=True)
+
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "home_page"  # Default to home page
+
+if "page_history" not in st.session_state:
+    st.session_state.page_history = []
+
+def navigate_to(page):
+    if st.session_state.current_page != page:
+        st.session_state.page_history.append(st.session_state.current_page)
+        st.session_state.current_page = page
+
+def go_back():
+    if st.session_state.page_history:
+        st.session_state.current_page = st.session_state.page_history.pop()
+
+# Add the Back button to all pages except the home page
+
+
+# Define the navigation logic
+if st.session_state.current_page == "home_page":
+    home_page()
+elif st.session_state.current_page == "chatbot_page":
+    chatbot_page()
+elif st.session_state.current_page == "login_page":
+    login_page()
+elif st.session_state.current_page == "movie_recommendation_page":
+    movie_recommendation_page()
